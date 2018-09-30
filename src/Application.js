@@ -24,29 +24,35 @@ class Application extends Component {
     }
   }
 
-  addGrudge = async (grudge) => {
-    try {
-      await API.post(API_NAME, API_PATH, { body: grudge });
-      this.setState(({ grudges }) => ({ grudges: [grudge, ...grudges] }));
-    } catch(err) {
-      console.log('There was an error creating the new grudge!');
-    }
+  addGrudge = grudge => {
+    this.setState(({ grudges }) => ({ grudges: [...grudges, grudge] }), async () => {
+      try {
+        await API.post(API_NAME, API_PATH, { body: grudge });
+      } catch(err) {
+        console.log('There was an error creating the new grudge!');
+        this.setState(({ grudges }) => ({ 
+          grudges: grudges.filter(other => other.id !== grudge.id) 
+        }))
+      }
+    });
   };
 
-  removeGrudge = async (grudge) => {
-    try {
-      await API.del(API_NAME, `${API_PATH}/object/${grudge.id}`)
-      this.setState(({ grudges }) => ({
-        grudges: grudges.filter(other => other.id !== grudge.id),
-      }));
-    } catch(err) {
-      console.error('There was an error deleting the grudge!');
-    }
+  removeGrudge = grudge => {
+    this.setState(({ grudges }) => ({
+      grudges: grudges.filter(other => other.id !== grudge.id),
+    }), async () => {
+      try {
+        await API.del(API_NAME, `${API_PATH}/object/${grudge.id}`)
+      } catch(err) {
+        console.error('There was an error deleting the grudge!');
+        this.setState(({ grudges }) => ({ grudges: [...grudges, grudge] }))
+      }
+    });
   };
 
   toggle = grudge => {
     const updatedGrudge = { ...grudge, avenged: !grudge.avenged };
-    this.setState(({ grudges }) => { 
+    this.setState(({ grudges }) => {
       const othergrudges = grudges.filter(other => other.id !== grudge.id);
       return { grudges: [updatedGrudge, ...othergrudges] };
     }, async () => {
@@ -54,6 +60,13 @@ class Application extends Component {
         await API.put(API_NAME, API_PATH, { body: updatedGrudge })
       } catch(err) {
         console.error('There was an error updating the grduge!');
+        // return grudges to previous state on error
+        this.setState(({ grudges }) => ({
+            grudges: [
+              ...grudges.filter(other => other.id !== grudge.id),
+              grudge,
+            ]
+        }))
       }
     });
 
