@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
-import { API } from 'aws-amplify';
+import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
+
+import { createGrudge, listGrudges } from './graphql'
 
 import NewGrudge from './NewGrudge';
 import Grudges from './Grudges';
@@ -17,7 +19,8 @@ class Application extends Component {
 
   async componentDidMount() {
     try {
-      const grudges = await API.get(API_NAME, API_PATH);
+      const response = await API.graphql(graphqlOperation(listGrudges))
+      const grudges = response.data.listGrudges.items
       this.setState({ grudges });
     } catch(err) {
       console.error('There was an error fetching the grudges!');
@@ -27,7 +30,7 @@ class Application extends Component {
   addGrudge = grudge => {
     this.setState(({ grudges }) => ({ grudges: [...grudges, grudge] }), async () => {
       try {
-        await API.post(API_NAME, API_PATH, { body: grudge });
+        await API.graphql(graphqlOperation(createGrudge, grudge))
       } catch(err) {
         console.log('There was an error creating the new grudge!');
         this.setState(({ grudges }) => ({ 
